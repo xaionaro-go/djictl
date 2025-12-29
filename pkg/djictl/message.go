@@ -92,7 +92,7 @@ func ParseMessageFromReader(r io.Reader) (*Message, error) {
 	msgCRC16 := BinaryOrder().Uint16(payloadWithCRC[len(payloadWithCRC)-2:])
 	expectedMsgCRC16 := crc16(buf.Bytes()[:buf.Len()-2])
 	if msgCRC16 != expectedMsgCRC16 {
-		return nil, fmt.Errorf("the full Message CRC16 does not match: received:%04X, expected:%04X", msgCRC16, expectedHeaderCRC)
+		return nil, fmt.Errorf("the full Message CRC16 does not match: received:%04X, expected:%04X", msgCRC16, expectedMsgCRC16)
 	}
 
 	return &msg, nil

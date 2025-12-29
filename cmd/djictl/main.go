@@ -18,6 +18,17 @@ func main() {
 	pflag.Parse()
 
 	ctx := getContext(loggerLevel, false, "")
+
+	if *wifiSSID == "" {
+		logger.Fatalf(ctx, "please set wifi SSID")
+	}
+	if *wifiPSK == "" {
+		logger.Fatalf(ctx, "please set wifi PSK")
+	}
+	if *rtmpURL == "" {
+		logger.Fatalf(ctx, "please set the RTMP URL")
+	}
+
 	devCh, errCh, err := djictl.Scan(ctx)
 	if err != nil {
 		logger.Fatalf(ctx, "%v", err)

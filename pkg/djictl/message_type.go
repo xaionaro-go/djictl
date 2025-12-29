@@ -19,12 +19,12 @@ const (
 	MessageTypeMaybeKeepAlive = MessageType(0x000427)
 
 	// SubsystemID: Pairer
+	MessageTypePairingStage2           = MessageType(0x400032)
 	MessageTypePairingStarted          = MessageType(0x000280)
 	MessageTypeSetPairingPIN           = MessageType(0x400745)
 	MessageTypePairingStatus           = MessageType(0xC00745)
 	MessageTypePairingPINApproved      = MessageType(0x400746)
 	MessageTypePairingStage1           = MessageType(0xC00746)
-	MessageTypePairingStage2           = MessageType(0x400032)
 	MessageTypeConnectToWiFi           = MessageType(0x400747)
 	MessageTypeConnectToWiFiResult     = MessageType(0xC00747)
 	MessageTypeStartScanningWiFi       = MessageType(0x4007AB)
@@ -32,21 +32,19 @@ const (
 	MessageTypeWiFiScanReport          = MessageType(0x4007AC)
 
 	// SubsystemID: Streamer
+	MessageTypeStartStopStreaming        = MessageType(0x40028E)
+	MessageTypeStartStopStreamingResult  = MessageType(0x80028E)
 	MessageTypePrepareToLiveStream       = MessageType(0x4002E1)
 	MessageTypePrepareToLiveStreamResult = MessageType(0xC002E1)
 	MessageTypeConfigureStreaming        = MessageType(0x400878)
-	MessageTypeStartStopStreaming        = MessageType(0x40028E)
-	MessageTypeStartStopStreamingResult  = MessageType(0x80028E)
 	MessageTypeStreamingStatus           = MessageType(0x000D02)
 
-	MessageTypeUnknown0 = MessageType(0x0000F1)
-	MessageTypeUnknown1 = MessageType(0x000280)
+	MessageTypeUnknown0 = MessageType(0x400081)
+	MessageTypeUnknown1 = MessageType(0x0000F1)
 	MessageTypeUnknown2 = MessageType(0x0002DC)
 	MessageTypeUnknown3 = MessageType(0x00041C)
 	MessageTypeUnknown4 = MessageType(0x000438)
 	MessageTypeUnknown5 = MessageType(0x000745)
-	MessageTypeUnknown6 = MessageType(0x000D02)
-	MessageTypeUnknown7 = MessageType(0x400081)
 )
 
 func (t MessageType) String() string {
