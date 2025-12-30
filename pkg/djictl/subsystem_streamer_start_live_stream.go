@@ -112,13 +112,13 @@ func (s *SubsystemStreamer) GetMessagePayloadConfigureLiveStream(
 func (s *SubsystemStreamer) ReceiveMessageStartLiveStreamResult(
 	ctx context.Context,
 ) (*Message, error) {
-	return s.Device().ReceiveMessage(ctx, MessageTypeConfigureStreaming)
+	return s.Device().ReceiveMessage(ctx, MessageTypeStartStopStreamingResult)
 }
 
 func (s *SubsystemStreamer) ReceiveMessageLiveStreamResult(
 	ctx context.Context,
 ) (*Message, error) {
-	return s.Device().ReceiveMessage(ctx, MessageTypeConfigureStreaming)
+	return s.Device().ReceiveMessage(ctx, MessageTypeStreamingStatus)
 }
 
 func (s *SubsystemStreamer) SendMessageStartLiveStream(

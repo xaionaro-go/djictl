@@ -23,7 +23,13 @@ func Scan(
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to open device, err: %w", err)
 	}
+	return ScanWithDevice(ctx, d)
+}
 
+func ScanWithDevice(
+	ctx context.Context,
+	d gatt.Device,
+) (<-chan *Device, <-chan error, error) {
 	ctx, cancelFn := context.WithCancel(ctx)
 
 	retCh := make(chan *Device, 100)
@@ -41,9 +47,9 @@ func Scan(
 			rssi int,
 		) {
 			if logUnknownDevices {
-				logger.Tracef(ctx, "gatt.PeripheralDiscovered(ctx, %s:%s, %v)", periph.ID(), periph.Name(), err)
+				logger.Tracef(ctx, "gatt.PeripheralDiscovered(ctx, %s:%s)", periph.ID(), periph.Name())
 				defer func() {
-					logger.Tracef(ctx, "/gatt.PeripheralDiscovered(ctx, %s:%s, %v)", periph.ID(), periph.Name(), err)
+					logger.Tracef(ctx, "/gatt.PeripheralDiscovered(ctx, %s:%s)", periph.ID(), periph.Name())
 				}()
 			}
 			deviceType := IdentifyDeviceType(adv.ManufacturerData)
@@ -82,7 +88,7 @@ func Scan(
 		}),
 	)
 
-	err = d.Start(ctx, func(ctx context.Context, d gatt.Device, s gatt.State) {
+	err := d.Start(ctx, func(ctx context.Context, d gatt.Device, s gatt.State) {
 		logger.Debugf(ctx, "state changed on device %v to %v", d.ID(), s)
 		switch s {
 		case gatt.StatePoweredOn:
@@ -100,5 +106,6 @@ func Scan(
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to initialize the bluetooth interface: %w", err)
 	}
+
 	return retCh, errCh, nil
 }

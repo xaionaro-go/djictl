@@ -65,6 +65,8 @@ github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOf
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/xaionaro-go/ctxflow v0.0.0-20250530224412-dee18b630ad7 h1:JtqG1ShLSuOGntq0ehUgNfYpyDi+uaQ6JyoNf4OM2vk=
 github.com/xaionaro-go/ctxflow v0.0.0-20250530224412-dee18b630ad7/go.mod h1:ceUHN/BIH0dY5/uq+KxLbe7qbi075/1jor0eFZ3TgWI=
+github.com/xaionaro-go/gatt v0.0.0-20251230184549-a66dd7c968e9 h1:aN27/TGzyQCD+NMuhbDflnLufInDisuNkZvZVZyhsuw=
+github.com/xaionaro-go/gatt v0.0.0-20251230184549-a66dd7c968e9/go.mod h1:g+LtXYAvY3MsV3LVC/kSk1lCa7LjZFH4OqbZB45SNCk=
 github.com/xaionaro-go/gorex v0.0.0-20241010205749-bcd59d639c4d h1:9DyH0lboWWzKUwiqGmp9sTZ3bSPhgJHiiWgV+hqY9Uo=
 github.com/xaionaro-go/gorex v0.0.0-20241010205749-bcd59d639c4d/go.mod h1:yI0EvHC6Ir5WIZp3tEk7o42/QqeTb9pkII+T8p4FlPo=
 github.com/xaionaro-go/logrustash v0.0.0-20240804141650-d48034780a5f h1:mMrVrYtH9MyCUzBwPvuEntvqdCJ0zifCfqV6bHU6z1M=

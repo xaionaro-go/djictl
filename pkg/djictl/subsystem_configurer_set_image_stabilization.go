@@ -61,5 +61,5 @@ func (s *SubsystemConfigurer) ReceiveMessageSetImageStabilizationResult(
 	ctx context.Context,
 ) (*Message, error) {
 	panic("not implemented")
-	//return s.Device().ReceiveMessage(ctx, MessageTypeSetImageStabilization)
+	return s.Device().ReceiveMessage(ctx, MessageTypeConfigure)
 }
