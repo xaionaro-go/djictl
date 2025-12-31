@@ -36,3 +36,7 @@ If it does not work, create a ticket.
 
 The reverse engineering was done here:
 * [github.com/xaionaro/reverse-engineering-dji](https://github.com/xaionaro/reverse-engineering-dji). Feel free to continue the research :)
+
+## See also:
+
+* A port to Qt (C++): [github.com/xaionaro/libdji](https://github.com/xaionaro/libdji)
