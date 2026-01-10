@@ -2,7 +2,9 @@ package djible
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"sort"
 
@@ -28,6 +30,8 @@ type Device struct {
 	CharacteristicSender           *gatt.Characteristic
 	CharacteristicPairingRequestor *gatt.Characteristic
 	CharacteristicReceiver         *gatt.Characteristic
+
+	ReceiveBuffer xsync.Map[*gatt.Characteristic, []byte]
 
 	ReceiveLocker                          xsync.Mutex
 	ReceivedPairingRequestConfirmationChan chan struct{}
@@ -165,13 +169,21 @@ func (d *Device) receiveNotification(
 		return
 	}
 
-	msg, err := duml.ParseMessage(b)
+	prevBuf, _ := d.ReceiveBuffer.LoadAndDelete(c)
+	combined := append(prevBuf, b...)
+	msg, err := duml.ParseMessage(combined)
 	if err != nil {
-		logger.Errorf(ctx, "unable to parse the duml.Message: %v", err)
+		if errors.Is(err, io.ErrUnexpectedEOF) {
+			logger.Debugf(ctx, "message is incomplete, waiting for more data...")
+			d.ReceiveBuffer.Store(c, combined)
+			return
+		}
+		logger.Errorf(ctx, "unable to parse the duml.Message (%X): %v", b, err)
 		return
 	}
 	logger.Debugf(ctx, "received duml.Message: %#+v", msg)
 	logger.Tracef(ctx, "payload: %X", msg.Payload)
+
 	select {
 	case d.getReceiveMessageChan(ctx, msg.Type) <- msg:
 	default:

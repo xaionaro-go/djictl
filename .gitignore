@@ -1,5 +1,7 @@
+/.github
 /build
 /.github/instructions/current_summary.md
 /.github/instructions/todo.md
 /djictl
 /*.txt
+/go.work*

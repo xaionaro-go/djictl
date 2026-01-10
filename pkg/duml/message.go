@@ -35,6 +35,14 @@ func ParseMessage(b []byte) (_ret *Message, _err error) {
 	return ParseMessageFromReader(bytes.NewReader(b))
 }
 
+const (
+	// the contribution of the headers to the total length
+	totalLengthHeaders = 11
+
+	// totalLengthHeaders + the tail (which consists of CRC16) length
+	totalLengthHeadersAndTail = totalLengthHeaders + 2
+)
+
 func ParseMessageFromReader(r io.Reader) (*Message, error) {
 	var buf bytes.Buffer
 	r = io.TeeReader(r, &buf)
@@ -49,6 +57,10 @@ func ParseMessageFromReader(r io.Reader) (*Message, error) {
 	}
 
 	totalLength := uint16(b[0]) | (uint16(b[1]&0x03) << 8)
+	if totalLength < totalLengthHeaders {
+		return nil, fmt.Errorf("invalid total length in Message: %d < 13", totalLength)
+	}
+
 	version := b[1] >> 2
 	if version != ProtocolVersion {
 		return nil, fmt.Errorf("unexpected version: received:0x%02X expected:0x%02X", version, ProtocolVersion)
@@ -83,26 +95,31 @@ func ParseMessageFromReader(r io.Reader) (*Message, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to read the payload: %w", err)
 	}
-	if len(payloadWithCRC) < 2 {
-		return nil, fmt.Errorf("not enough bytes left for CRC16: left:%d, expected:2", len(payloadWithCRC))
+
+	expectedLength := int(totalLength) - int(totalLengthHeaders)
+	if len(payloadWithCRC) < expectedLength {
+		return nil, fmt.Errorf("(%w) payload is too short: expected at least %d bytes, but received only %d", io.ErrUnexpectedEOF, expectedLength, len(payloadWithCRC))
+	}
+	if len(payloadWithCRC) > expectedLength {
+		return nil, fmt.Errorf("payload is too long: expected %d bytes, but received %d", expectedLength, len(payloadWithCRC))
 	}
 	msg.Payload = payloadWithCRC[:len(payloadWithCRC)-2]
 	msgCRC16 := BinaryOrder().Uint16(payloadWithCRC[len(payloadWithCRC)-2:])
 	expectedMsgCRC16 := crc16(buf.Bytes()[:buf.Len()-2])
 	if msgCRC16 != expectedMsgCRC16 {
-		return nil, fmt.Errorf("the full Message CRC16 does not match: received:%04X, expected:%04X", msgCRC16, expectedMsgCRC16)
+		return nil, fmt.Errorf("the full Message CRC16 does not match: received:%04X, expected:%04X (payloadWithCRC:%X; totalLength:%d)", msgCRC16, expectedMsgCRC16, payloadWithCRC, totalLength)
 	}
 
 	return &msg, nil
 }
 
 func (msg *Message) Bytes() []byte {
-	if len(msg.Payload) > 1023-13 {
-		panic(fmt.Errorf("the payload is too long: %d > %d", len(msg.Payload), 1023-13))
+	if len(msg.Payload) > 1023-totalLengthHeadersAndTail {
+		panic(fmt.Errorf("the payload is too long: %d > %d", len(msg.Payload), 1023-totalLengthHeadersAndTail))
 	}
 	var buf bytes.Buffer
 	must(buf.Write(MessageStartMagic))
-	length := 13 + uint16(len(msg.Payload))
+	length := uint16(len(msg.Payload)) + uint16(totalLengthHeadersAndTail)
 	must(buf.Write([]byte{byte(length & 0xff)}))
 	must(buf.Write([]byte{(ProtocolVersion << 2) | byte(length>>8)&0x03}))
 	must(buf.Write([]byte{crc8(buf.Bytes())}))
