@@ -186,14 +186,19 @@ func main() {
 					},
 					{
 						Name:  "battery-info",
-						Usage: "Request battery information [does not work, yet]",
+						Usage: "Request battery information",
 						Action: func(c *cli.Context) error {
 							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
 								err := dev.Init(ctx)
 								if err != nil {
 									return err
 								}
-								return dev.AppToBattery().GetInfo(ctx)
+								status, err := dev.AppToBattery().GetInfo(ctx)
+								if err != nil {
+									return err
+								}
+								fmt.Printf("Battery capacity: %s\n", status.Capacity)
+								return nil
 							})
 						},
 					},

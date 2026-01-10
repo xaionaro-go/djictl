@@ -48,11 +48,12 @@ func (s *InterfaceAppToVideoTransmission) LiveStream(
 		if err != nil {
 			return fmt.Errorf("unable to receive a response: %w", err)
 		}
-		if len(msg.Payload) < 21 {
+		status, err := duml.ParseBatteryStatus(ctx, msg.Payload)
+		if err != nil {
+			logger.Debugf(ctx, "unable to parse battery status: %v", err)
 			continue
 		}
-		batteryPercentage := msg.Payload[20]
-		logger.Infof(ctx, "battery: %d%%", batteryPercentage)
+		logger.Infof(ctx, "battery: %s", status.Capacity)
 	}
 }
 
