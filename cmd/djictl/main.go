@@ -1,54 +1,326 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"os"
 	"strings"
 
 	"github.com/facebookincubator/go-belt/tool/logger"
-	"github.com/spf13/pflag"
-	"github.com/xaionaro-go/djictl/pkg/djictl"
+	"github.com/urfave/cli/v2"
+	"github.com/xaionaro-go/djictl/pkg/djible"
+	"github.com/xaionaro-go/djictl/pkg/djiwifi"
+	"github.com/xaionaro-go/djictl/pkg/duml"
 )
 
+var errDone = fmt.Errorf("done")
+
 func main() {
-	loggerLevel := logger.LevelInfo
-	pflag.Var(&loggerLevel, "log-level", "Log level")
-	filterDeviceAddr := pflag.String("filter-device-addr", "", "")
-	wifiSSID := pflag.String("wifi-ssid", "", "")
-	wifiPSK := pflag.String("wifi-psk", "", "")
-	rtmpURL := pflag.String("rtmp-url", "", "")
-	pflag.Parse()
+	app := &cli.App{
+		Name:  "djictl",
+		Usage: "DJI Osmo devices control tool",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "log-level",
+				Value: "info",
+				Usage: "Log level (debug, info, warn, error, fatal, panic)",
+			},
+			&cli.StringFlag{
+				Name:  "filter-device-addr",
+				Value: "",
+				Usage: "Filter device by address",
+			},
+		},
+		Commands: []*cli.Command{
+			{
+				Name:  "ble",
+				Usage: "BLE-based commands",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "scan",
+						Usage: "Scan for DJI devices",
+						Action: func(c *cli.Context) error {
+							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
+								fmt.Printf("Found device: %s\n", dev)
+								return nil
+							})
+						},
+					},
+					{
+						Name:  "connect-wifi-and-start-streaming",
+						Usage: "Connect device to WiFi and start RTMP streaming",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "wifi-ssid",
+								Usage:    "WiFi SSID",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "wifi-psk",
+								Usage:    "WiFi Password",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "rtmp-url",
+								Usage:    "RTMP URL",
+								Required: true,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
+								return connectWiFiAndStartStreaming(
+									ctx,
+									dev,
+									c.String("wifi-ssid"),
+									c.String("wifi-psk"),
+									c.String("rtmp-url"),
+								)
+							})
+						},
+					},
+					{
+						Name:  "camera-ap-info",
+						Usage: "Get camera AP SSID and Password",
+						Action: func(c *cli.Context) error {
+							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
+								err := dev.Init(ctx)
+								if err != nil {
+									return fmt.Errorf("unable to initialize: %w", err)
+								}
+								err = dev.AppToWiFiGroundStation().Pair(ctx)
+								if err != nil {
+									return fmt.Errorf("unable to pair: %w", err)
+								}
+								ssid, psk, err := dev.AppToWiFiGroundStation().CameraAPInfo(ctx)
+								if err != nil {
+									return fmt.Errorf("unable to get camera AP info: %w", err)
+								}
+								fmt.Printf("SSID: %s\nPSK: %s\n", ssid, psk)
+								return errDone
+							})
+						},
+					},
+					{
+						Name:  "fcc-enable",
+						Usage: "Enable FCC mode",
+						Action: func(c *cli.Context) error {
+							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
+								err := dev.Init(ctx)
+								if err != nil {
+									return err
+								}
+								return dev.AppToCamera().SetFCCEnable(ctx, true)
+							})
+						},
+					},
+					{
+						Name:  "set-goggles-mode",
+						Usage: "Set Goggles mode",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:  "mode",
+								Value: "usb",
+								Usage: "Mode: usb or normal",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
+								err := dev.Init(ctx)
+								if err != nil {
+									return err
+								}
+								var mode duml.GogglesMode
+								switch strings.ToLower(c.String("mode")) {
+								case "usb":
+									mode = duml.GogglesModeUSB
+								case "normal":
+									mode = duml.GogglesModeNormal
+								default:
+									return fmt.Errorf("invalid mode: %s", c.String("mode"))
+								}
+								return dev.AppToGoggles().SetMode(ctx, mode)
+							})
+						},
+					},
+					{
+						Name:  "remote-controller-simulator",
+						Usage: "Send Remote Controller simulator data",
+						Flags: []cli.Flag{
+							&cli.IntFlag{Name: "right-h", Value: 1024},
+							&cli.IntFlag{Name: "right-v", Value: 1024},
+							&cli.IntFlag{Name: "left-v", Value: 1024},
+							&cli.IntFlag{Name: "left-h", Value: 1024},
+						},
+						Action: func(c *cli.Context) error {
+							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
+								err := dev.Init(ctx)
+								if err != nil {
+									return err
+								}
+								data := duml.RemoteControllerSimulatorData{
+									RightStickHorizontal: uint16(c.Int("right-h")),
+									RightStickVertical:   uint16(c.Int("right-v")),
+									LeftStickVertical:    uint16(c.Int("left-v")),
+									LeftStickHorizontal:  uint16(c.Int("left-h")),
+								}
+								return dev.AppToRemoteController().SendData(ctx, data)
+							})
+						},
+					},
+					{
+						Name:  "rtmp-broadcast",
+						Usage: "Configure RTMP broadcast",
+						Flags: []cli.Flag{
+							&cli.StringFlag{Name: "url", Usage: "RTMP URL", Required: true},
+							&cli.BoolFlag{Name: "disable", Usage: "Disable (instead of enable)"},
+						},
+						Action: func(c *cli.Context) error {
+							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
+								err := dev.Init(ctx)
+								if err != nil {
+									return err
+								}
+								return dev.AppToVideoTransmission().ConfigureRTMP(ctx, c.String("url"), !c.Bool("disable"))
+							})
+						},
+					},
+					{
+						Name:  "battery-info",
+						Usage: "Request battery information",
+						Action: func(c *cli.Context) error {
+							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
+								err := dev.Init(ctx)
+								if err != nil {
+									return err
+								}
+								return dev.AppToBattery().GetInfo(ctx)
+							})
+						},
+					},
+					{
+						Name:  "version-info",
+						Usage: "Request firmware version",
+						Action: func(c *cli.Context) error {
+							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
+								err := dev.Init(ctx)
+								if err != nil {
+									return err
+								}
+								return dev.AppToCamera().GetVersion(ctx)
+							})
+						},
+					},
+				},
+			},
+			{
+				Name:  "wifi",
+				Usage: "WiFi-based commands (UDP 9004)",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "addr",
+						Value: "192.168.2.1:9004",
+						Usage: "Device UDP address",
+					},
+				},
+				Subcommands: []*cli.Command{
+					{
+						Name:  "start-video",
+						Usage: "Start video via WiFi",
+						Action: func(c *cli.Context) error {
+							return runOnWiFi(c, func(ctx context.Context, ctrl *djiwifi.Controller) error {
+								if err := ctrl.SendHandshake(ctx); err != nil {
+									return err
+								}
+								return ctrl.SendVideoHandshake(ctx)
+							})
+						},
+					},
+					{
+						Name:  "fcc-enable",
+						Usage: "Enable FCC mode via WiFi",
+						Action: func(c *cli.Context) error {
+							return runOnWiFi(c, func(ctx context.Context, ctrl *djiwifi.Controller) error {
+								return ctrl.SendFCCEnable(ctx)
+							})
+						},
+					},
+					{
+						Name:  "rtmp-broadcast",
+						Usage: "Configure RTMP broadcast via WiFi",
+						Flags: []cli.Flag{
+							&cli.StringFlag{Name: "url", Usage: "RTMP URL", Required: true},
+							&cli.BoolFlag{Name: "disable", Usage: "Disable (instead of enable)"},
+						},
+						Action: func(c *cli.Context) error {
+							return runOnWiFi(c, func(ctx context.Context, ctrl *djiwifi.Controller) error {
+								return ctrl.SendConfigureBroadcast(ctx, c.String("url"), !c.Bool("disable"))
+							})
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if err := app.Run(os.Args); err != nil {
+		if err == errDone {
+			return
+		}
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runOnBLE(c *cli.Context, action func(ctx context.Context, dev *djible.Device) error) error {
+	var loggerLevel logger.Level
+	if err := loggerLevel.Set(c.String("log-level")); err != nil {
+		return fmt.Errorf("invalid log level '%s': %w", c.String("log-level"), err)
+	}
 
 	ctx := getContext(loggerLevel, false, "")
+	logger.Debugf(ctx, "log level: %s (raw value: '%s')", loggerLevel, c.String("log-level"))
+	filterDeviceAddr := c.String("filter-device-addr")
 
-	if *wifiSSID == "" {
-		logger.Fatalf(ctx, "please set wifi SSID")
-	}
-	if *wifiPSK == "" {
-		logger.Fatalf(ctx, "please set wifi PSK")
-	}
-	if *rtmpURL == "" {
-		logger.Fatalf(ctx, "please set the RTMP URL")
-	}
-
-	devCh, errCh, err := djictl.Scan(ctx)
+	devCh, errCh, err := djible.Scan(ctx)
 	if err != nil {
-		logger.Fatalf(ctx, "%v", err)
+		return fmt.Errorf("unable to start scanning: %w", err)
 	}
 
 	for {
 		select {
 		case dev := <-devCh:
 			logger.Debugf(ctx, "found device %s", dev)
-			if !strings.Contains(strings.ToLower(dev.ID.String()), strings.ToLower(*filterDeviceAddr)) {
-				logger.Infof(ctx, "found device %s; but skipping, because it's address does not match filter '%s'...", dev, dev.ID)
+			if !strings.Contains(strings.ToLower(dev.ID.String()), strings.ToLower(filterDeviceAddr)) {
+				logger.Infof(ctx, "found device %s; but skipping, because it's address does not match filter '%s'...", dev, filterDeviceAddr)
 				continue
 			}
 
-			err := connectWiFiAndStartStreaming(ctx, dev, *wifiSSID, *wifiPSK, *rtmpURL)
-			if err != nil {
-				logger.Fatalf(ctx, "%v", err)
+			if err := action(ctx, dev); err != nil {
+				return err
 			}
 		case err := <-errCh:
-			logger.Fatalf(ctx, "%v", err)
+			return err
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
+}
+
+func runOnWiFi(c *cli.Context, action func(ctx context.Context, ctrl *djiwifi.Controller) error) error {
+	var loggerLevel logger.Level
+	if err := loggerLevel.Set(c.String("log-level")); err != nil {
+		return fmt.Errorf("invalid log level '%s': %w", c.String("log-level"), err)
+	}
+
+	ctx := getContext(loggerLevel, false, "")
+	logger.Debugf(ctx, "log level: %s (raw value: '%s')", loggerLevel, c.String("log-level"))
+	addr := c.String("addr")
+
+	ctrl, err := djiwifi.NewController(ctx, addr)
+	if err != nil {
+		return err
+	}
+	defer ctrl.Close()
+
+	return action(ctx, ctrl)
 }
