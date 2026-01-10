@@ -142,7 +142,7 @@ func TestConnectWiFiAndStartStreaming(t *testing.T) {
 	case dev := <-devCh:
 		t.Logf("Found device: %s", dev)
 
-		err := connectWiFiAndStartStreaming(ctx, dev, "test-ssid", "test-psk", "rtmp://test/live")
+		err := connectWiFiAndStartStreaming(ctx, dev, "test-ssid", "test-psk", "rtmp://test/live", duml.Resolution1080p, 6000, duml.FPS30)
 		if err != nil && !errors.Is(err, context.Canceled) {
 			t.Fatalf("runProcess failed: %v", err)
 		}

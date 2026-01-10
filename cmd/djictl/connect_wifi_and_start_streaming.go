@@ -9,7 +9,14 @@ import (
 	"github.com/xaionaro-go/djictl/pkg/duml"
 )
 
-func connectWiFiAndStartStreaming(ctx context.Context, dev *djible.Device, wifiSSID, wifiPSK, rtmpURL string) error {
+func connectWiFiAndStartStreaming(
+	ctx context.Context,
+	dev *djible.Device,
+	wifiSSID, wifiPSK, rtmpURL string,
+	resolution duml.Resolution,
+	bitrateKbps uint16,
+	fps duml.FPS,
+) error {
 	logger.Infof(ctx, "found device %s; initializing...", dev)
 
 	err := dev.Init(ctx)
@@ -41,7 +48,7 @@ func connectWiFiAndStartStreaming(ctx context.Context, dev *djible.Device, wifiS
 		}
 	}
 	logger.Infof(ctx, "start live stream")
-	err = dev.AppToVideoTransmission().LiveStream(ctx, duml.Resolution1080p, 5000, duml.FPS25, rtmpURL)
+	err = dev.AppToVideoTransmission().LiveStream(ctx, resolution, bitrateKbps, fps, rtmpURL)
 	if err != nil {
 		return fmt.Errorf("unable to make the device to stream: %w", err)
 	}

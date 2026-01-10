@@ -65,15 +65,41 @@ func main() {
 								Usage:    "RTMP URL",
 								Required: true,
 							},
+							&cli.StringFlag{
+								Name:  "resolution",
+								Usage: "Video resolution (allowed values: 480p, 720p, 1080p)",
+								Value: "1080p",
+							},
+							&cli.UintFlag{
+								Name:  "bitrate-kbps",
+								Usage: "bitrate in Kbps",
+								Value: 6000,
+							},
+							&cli.UintFlag{
+								Name:  "fps",
+								Usage: "frames per second (allowed values: 25, 30)",
+								Value: 30,
+							},
 						},
 						Action: func(c *cli.Context) error {
 							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
+								resolution := duml.ResolutionFromString(c.String("resolution"))
+								if resolution == duml.UndefinedResolution {
+									return fmt.Errorf("invalid resolution value %q", c.String("resolution"))
+								}
+								fps := duml.FPSFromUint(uint(c.Uint("fps")))
+								if fps == duml.UndefinedFPS {
+									return fmt.Errorf("invalid fps value %d", c.Uint("fps"))
+								}
 								return connectWiFiAndStartStreaming(
 									ctx,
 									dev,
 									c.String("wifi-ssid"),
 									c.String("wifi-psk"),
 									c.String("rtmp-url"),
+									resolution,
+									uint16(c.Uint("bitrate-kbps")),
+									fps,
 								)
 							})
 						},
