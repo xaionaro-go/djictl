@@ -80,7 +80,7 @@ func main() {
 					},
 					{
 						Name:  "camera-ap-info",
-						Usage: "Get camera AP SSID and Password",
+						Usage: "Get camera AP SSID and Password [does not work, yet]",
 						Action: func(c *cli.Context) error {
 							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
 								err := dev.Init(ctx)
@@ -102,7 +102,7 @@ func main() {
 					},
 					{
 						Name:  "fcc-enable",
-						Usage: "Enable FCC mode",
+						Usage: "Enable FCC mode [does not work, yet]",
 						Action: func(c *cli.Context) error {
 							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
 								err := dev.Init(ctx)
@@ -115,7 +115,7 @@ func main() {
 					},
 					{
 						Name:  "set-goggles-mode",
-						Usage: "Set Goggles mode",
+						Usage: "Set Goggles mode [does not work, yet]",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:  "mode",
@@ -144,7 +144,7 @@ func main() {
 					},
 					{
 						Name:  "remote-controller-simulator",
-						Usage: "Send Remote Controller simulator data",
+						Usage: "Send Remote Controller simulator data [does not work, yet]",
 						Flags: []cli.Flag{
 							&cli.IntFlag{Name: "right-h", Value: 1024},
 							&cli.IntFlag{Name: "right-v", Value: 1024},
@@ -169,7 +169,7 @@ func main() {
 					},
 					{
 						Name:  "rtmp-broadcast",
-						Usage: "Configure RTMP broadcast",
+						Usage: "Configure RTMP broadcast [does not work, yet]",
 						Flags: []cli.Flag{
 							&cli.StringFlag{Name: "url", Usage: "RTMP URL", Required: true},
 							&cli.BoolFlag{Name: "disable", Usage: "Disable (instead of enable)"},
@@ -186,7 +186,7 @@ func main() {
 					},
 					{
 						Name:  "battery-info",
-						Usage: "Request battery information",
+						Usage: "Request battery information [does not work, yet]",
 						Action: func(c *cli.Context) error {
 							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
 								err := dev.Init(ctx)
@@ -198,8 +198,8 @@ func main() {
 						},
 					},
 					{
-						Name:  "version-info",
-						Usage: "Request firmware version",
+						Name:  "firmware-version",
+						Usage: "Request firmware version [does not work, yet]",
 						Action: func(c *cli.Context) error {
 							return runOnBLE(c, func(ctx context.Context, dev *djible.Device) error {
 								err := dev.Init(ctx)
@@ -225,7 +225,7 @@ func main() {
 				Subcommands: []*cli.Command{
 					{
 						Name:  "start-video",
-						Usage: "Start video via WiFi",
+						Usage: "Start video via WiFi [does not work, yet]",
 						Action: func(c *cli.Context) error {
 							return runOnWiFi(c, func(ctx context.Context, ctrl *djiwifi.Controller) error {
 								if err := ctrl.SendHandshake(ctx); err != nil {
@@ -237,7 +237,7 @@ func main() {
 					},
 					{
 						Name:  "fcc-enable",
-						Usage: "Enable FCC mode via WiFi",
+						Usage: "Enable FCC mode via WiFi [does not work, yet]",
 						Action: func(c *cli.Context) error {
 							return runOnWiFi(c, func(ctx context.Context, ctrl *djiwifi.Controller) error {
 								return ctrl.SendFCCEnable(ctx)
@@ -246,7 +246,7 @@ func main() {
 					},
 					{
 						Name:  "rtmp-broadcast",
-						Usage: "Configure RTMP broadcast via WiFi",
+						Usage: "Configure RTMP broadcast via WiFi [does not work, yet]",
 						Flags: []cli.Flag{
 							&cli.StringFlag{Name: "url", Usage: "RTMP URL", Required: true},
 							&cli.BoolFlag{Name: "disable", Usage: "Disable (instead of enable)"},

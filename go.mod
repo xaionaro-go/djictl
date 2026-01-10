@@ -9,7 +9,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.7
-	github.com/xaionaro-go/gatt v0.0.0-20251230184549-a66dd7c968e9
+	github.com/xaionaro-go/gatt v0.0.0-20260110182159-b6bdd7334a6c
 	github.com/xaionaro-go/observability v0.0.0-20250525153415-e6c2d935ab34
 	github.com/xaionaro-go/secret v0.0.0-20250111141743-ced12e1082c2
 	github.com/xaionaro-go/xsync v0.0.0-20250511184922-deec5fb01a0f
