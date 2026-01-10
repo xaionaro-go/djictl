@@ -240,7 +240,7 @@ func main() {
 						Usage: "Enable FCC mode via WiFi [does not work, yet]",
 						Action: func(c *cli.Context) error {
 							return runOnWiFi(c, func(ctx context.Context, ctrl *djiwifi.Controller) error {
-								return ctrl.SendFCCEnable(ctx)
+								return ctrl.SendFCCEnable(ctx, true)
 							})
 						},
 					},

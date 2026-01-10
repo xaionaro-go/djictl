@@ -20,7 +20,7 @@ func TestGogglesModeMessage(t *testing.T) {
 }
 
 func TestFCCEnableMessage(t *testing.T) {
-	msg := NewFCCEnableMessage()
+	msg := NewFCCEnableMessage(true)
 	if msg.Type != MessageTypeFCCSupport {
 		t.Errorf("Expected type %v, got %v", MessageTypeFCCSupport, msg.Type)
 	}

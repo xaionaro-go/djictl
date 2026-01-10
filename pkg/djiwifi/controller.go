@@ -113,8 +113,8 @@ func (c *Controller) SendSimulatorData(ctx context.Context, data duml.RemoteCont
 	return c.SendDUML(ctx, msg, MetadataApp)
 }
 
-func (c *Controller) SendFCCEnable(ctx context.Context) error {
-	msg := duml.NewFCCEnableMessage()
+func (c *Controller) SendFCCEnable(ctx context.Context, enable bool) error {
+	msg := duml.NewFCCEnableMessage(enable)
 	msg.Interface = duml.InterfaceIDAppToCamera
 	return c.SendDUML(ctx, msg, MetadataApp)
 }
