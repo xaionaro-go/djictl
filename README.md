@@ -15,19 +15,55 @@ make
 
 expected output:
 ```
-xaionaro@void:/home/streaming/go/src/github.com/xaionaro-go/djictl$ ./build/djictl-linux-amd64 --help
-Usage of ./build/djictl-linux-amd64:
-      --filter-device-addr string   
-      --log-level Level             Log level (default info)
-      --rtmp-url string             
-      --wifi-psk string             
-      --wifi-ssid string            
-pflag: help requested
+streaming@void:~/go/src/github.com/xaionaro-go/djictl$ build/djictl-linux-amd64 --help
+NAME:
+   djictl - DJI Osmo devices control tool
+
+USAGE:
+   djictl [global options] command [command options]
+
+COMMANDS:
+   ble      BLE-based commands
+   wifi     WiFi-based commands (UDP 9004)
+   help, h  Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --log-level value           Log level (debug, info, warn, error, fatal, panic) (default: "info")
+   --filter-device-addr value  Filter device by address
+   --help, -h                  show help
+```
+
+```sh
+./build/djictl-linux-amd64 ble --help
+```
+expected output:
+```
+streaming@void:~/go/src/github.com/xaionaro-go/djictl$ build/djictl-linux-amd64 ble --help
+NAME:
+   djictl ble - BLE-based commands
+
+USAGE:
+   djictl ble [command options]
+
+COMMANDS:
+   scan                              Scan for DJI devices
+   connect-wifi-and-start-streaming  Connect device to WiFi and start RTMP streaming
+   camera-ap-info                    Get camera AP SSID and Password [does not work, yet]
+   fcc-enable                        Enable FCC mode [does not work, yet]
+   set-goggles-mode                  Set Goggles mode [does not work, yet]
+   remote-controller-simulator       Send Remote Controller simulator data [does not work, yet]
+   rtmp-broadcast                    Configure RTMP broadcast [does not work, yet]
+   battery-info                      Request battery information [does not work, yet]
+   firmware-version                  Request firmware version [does not work, yet]
+   help, h                           Shows a list of commands or help for one command
+
+OPTIONS:
+   --help, -h  show help
 ```
 
 Let's start a stream to our server:
 ```sh
-sudo ./build/djictl-linux-amd64 --wifi-ssid '<MY-WIFI-SSID>' --wifi-psk '<MY-WIFI-PSK>' --rtmp-url 'rtmp://MY_HOST/live/stream'
+sudo ./build/djictl-linux-amd64 ble connect-wifi-and-start-streaming --wifi-ssid '<MY-WIFI-SSID>' --wifi-psk '<MY-WIFI-PSK>' --rtmp-url 'rtmp://MY_HOST/live/stream'
 ```
 
 If it does not work, create a ticket.
