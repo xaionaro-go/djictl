@@ -36,8 +36,6 @@ func getContext(
 	insecureDebug bool,
 	logstashAddr string,
 ) context.Context {
-	observability.LogLevelFilter.SetLevel(loggerLevel)
-
 	ctx := context.Background()
 	setDefaultCallerPCFilter()
 
@@ -64,10 +62,7 @@ func getContext(
 		)
 	}
 
-	l := xlogrus.New(ll).WithLevel(logger.LevelTrace).WithPreHooks(logPreHooks...).WithHooks(logHooks...)
-
-	logrus.SetLevel(xlogrus.LevelToLogrus(l.Level()))
-
+	l := xlogrus.New(ll).WithLevel(loggerLevel).WithPreHooks(logPreHooks...).WithHooks(logHooks...)
 	ctx = logger.CtxWithLogger(ctx, l)
 
 	if logstashAddr != "" {

@@ -9,7 +9,8 @@ import (
 	"time"
 
 	"github.com/facebookincubator/go-belt/tool/logger"
-	"github.com/xaionaro-go/djictl/pkg/djictl"
+	"github.com/xaionaro-go/djictl/pkg/djible"
+	"github.com/xaionaro-go/djictl/pkg/duml"
 	"github.com/xaionaro-go/gatt"
 )
 
@@ -28,8 +29,8 @@ func TestConnectWiFiAndStartStreaming(t *testing.T) {
 	receiverChar.SetVHandle(0x002D)
 	receiverChar.HandleNotifyFunc(func(ctx context.Context, r gatt.Request, n gatt.Notifier) {
 		t.Log("Central subscribed to receiver")
-		msg := &djictl.Message{
-			Type:    djictl.MessageTypeMaybeStatus,
+		msg := &duml.Message{
+			Type:    duml.MessageTypeMaybeStatus,
 			Payload: make([]byte, 100), // Big enough packet
 		}
 		b := msg.Bytes()
@@ -42,7 +43,7 @@ func TestConnectWiFiAndStartStreaming(t *testing.T) {
 	senderChar.SetVHandle(0x0030)
 	senderChar.HandleWriteFunc(func(ctx context.Context, r gatt.Request, b []byte) (status byte) {
 		t.Logf("SENT_HEX: %X", b)
-		msg, err := djictl.ParseMessage(b)
+		msg, err := duml.ParseMessage(b)
 		if err != nil {
 			t.Errorf("failed to parse message: %v", err)
 			return 0
@@ -50,41 +51,41 @@ func TestConnectWiFiAndStartStreaming(t *testing.T) {
 		t.Logf("Device received message: %v", msg.Type)
 
 		switch msg.Type {
-		case djictl.MessageTypePrepareToLiveStream:
+		case duml.MessageTypePrepareToLiveStream:
 			go func() {
-				resp := &djictl.Message{
-					Subsystem: msg.Subsystem,
+				resp := &duml.Message{
+					Interface: msg.Interface,
 					ID:        msg.ID,
-					Type:      djictl.MessageTypePrepareToLiveStreamResult,
+					Type:      duml.MessageTypePrepareToLiveStreamResult,
 					Payload:   []byte{0x00}, // Success
 				}
 				b := resp.Bytes()
 				t.Logf("RECV_HEX: %X", b)
 				simDevice.SendNotification(0x002D, b)
 			}()
-		case djictl.MessageTypeConnectToWiFi:
+		case duml.MessageTypeConnectToWiFi:
 			go func() {
-				resp := &djictl.Message{
-					Subsystem: msg.Subsystem,
+				resp := &duml.Message{
+					Interface: msg.Interface,
 					ID:        msg.ID,
-					Type:      djictl.MessageTypeConnectToWiFiResult,
+					Type:      duml.MessageTypeConnectToWiFiResult,
 					Payload:   []byte{0x00, 0x00}, // Success
 				}
 				b := resp.Bytes()
 				t.Logf("RECV_HEX: %X", b)
 				simDevice.SendNotification(0x002D, b)
 			}()
-		case djictl.MessageTypeStartStopStreaming: // Also MessageTypeConfigure
+		case duml.MessageTypeStartStopStreaming: // Also MessageTypeConfigure
 			go func() {
-				resp := &djictl.Message{
-					Subsystem: msg.Subsystem,
+				resp := &duml.Message{
+					Interface: msg.Interface,
 					ID:        msg.ID,
 					Type:      msg.Type,     // Use the same type for response (or the result type if known)
 					Payload:   []byte{0x00}, // Success
 				}
 				// For StartStopStreaming, the result type is actually different
-				if msg.Subsystem == djictl.SubsystemIDStreamer {
-					resp.Type = djictl.MessageTypeStartStopStreamingResult
+				if msg.Interface == duml.InterfaceIDAppToVideoTransmission {
+					resp.Type = duml.MessageTypeStartStopStreamingResult
 				}
 				b := resp.Bytes()
 				t.Logf("RECV_HEX: %X", b)
@@ -92,10 +93,10 @@ func TestConnectWiFiAndStartStreaming(t *testing.T) {
 
 				// If this is the actual start streaming message (not the prepare stage),
 				// then send the streaming status and cancel the context.
-				if msg.Subsystem == djictl.SubsystemIDStreamer && len(msg.Payload) > 4 && msg.Payload[0] == 0x01 {
+				if msg.Interface == duml.InterfaceIDAppToVideoTransmission && len(msg.Payload) > 4 && msg.Payload[0] == 0x01 {
 					// Send streaming status to satisfy the loop in LiveStream
-					status := &djictl.Message{
-						Type:    djictl.MessageTypeStreamingStatus,
+					status := &duml.Message{
+						Type:    duml.MessageTypeBatteryStatus,
 						Payload: make([]byte, 21),
 					}
 					status.Payload[20] = 100 // 100% battery
@@ -107,12 +108,12 @@ func TestConnectWiFiAndStartStreaming(t *testing.T) {
 					cancel()
 				}
 			}()
-		case djictl.MessageTypeSetPairingPIN:
+		case duml.MessageTypeSetPairingPIN:
 			go func() {
-				resp := &djictl.Message{
-					Subsystem: msg.Subsystem,
+				resp := &duml.Message{
+					Interface: msg.Interface,
 					ID:        msg.ID,
-					Type:      djictl.MessageTypePairingStatus,
+					Type:      duml.MessageTypePairingStatus,
 					Payload:   []byte{0x00, 0x01}, // Already paired
 				}
 				b := resp.Bytes()
@@ -132,7 +133,7 @@ func TestConnectWiFiAndStartStreaming(t *testing.T) {
 	})
 
 	// 2. Start scanning
-	devCh, errCh, err := djictl.ScanWithDevice(ctx, simDevice)
+	devCh, errCh, err := djible.ScanWithDevice(ctx, simDevice)
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}
