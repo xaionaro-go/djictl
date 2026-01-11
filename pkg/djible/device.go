@@ -144,14 +144,6 @@ func (d *Device) Init(ctx context.Context) (_err error) {
 		return fmt.Errorf("unable to set MTU: %w", err)
 	}
 
-	logger.Debugf(ctx, "waiting for the a big enough packet (to make sure MTU is already set to the correct value)")
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case msg := <-d.getReceiveMessageChan(ctx, duml.MessageTypeMaybeStatus):
-		logger.Debugf(ctx, "received a status: %#+v", msg)
-	}
-
 	return nil
 }
 

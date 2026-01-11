@@ -75,7 +75,7 @@ func TestConnectWiFiAndStartStreaming(t *testing.T) {
 				t.Logf("RECV_HEX: %X", b)
 				simDevice.SendNotification(0x002D, b)
 			}()
-		case duml.MessageTypeStartStopStreaming: // Also MessageTypeConfigure
+		case duml.MessageTypeStartStopStreaming, duml.MessageTypeConfigureStreaming: // Also MessageTypeConfigure
 			go func() {
 				resp := &duml.Message{
 					Interface: msg.Interface,
@@ -84,8 +84,13 @@ func TestConnectWiFiAndStartStreaming(t *testing.T) {
 					Payload:   []byte{0x00}, // Success
 				}
 				// For StartStopStreaming, the result type is actually different
-				if msg.Interface == duml.InterfaceIDAppToVideoTransmission {
+				switch {
+				case msg.Type == duml.MessageTypeStartStopStreaming && msg.Interface == duml.InterfaceIDAppToVideoTransmission:
 					resp.Type = duml.MessageTypeStartStopStreamingResult
+				case msg.Type == duml.MessageTypeConfigureStreaming && msg.Interface == duml.InterfaceIDAppToVideoTransmission:
+					resp.Type = duml.MessageTypeConfigureStreaming.WithFlags(duml.MessageTypeFlagResponse | duml.MessageTypeFlagAckRequired)
+				case msg.Type.Flags&duml.MessageTypeFlagAckRequired != 0:
+					resp.Type = msg.Type.WithFlags(duml.MessageTypeFlagResponse | duml.MessageTypeFlagAckRequired)
 				}
 				b := resp.Bytes()
 				t.Logf("RECV_HEX: %X", b)
