@@ -138,3 +138,7 @@ func (msg *Message) Bytes() []byte {
 
 	return buf.Bytes()
 }
+
+func (msg *Message) String() string {
+	return fmt.Sprintf("Message{Interface:%s ID:%s Type:%s Payload:%X}", msg.Interface, msg.ID, msg.Type, msg.Payload)
+}

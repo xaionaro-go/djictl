@@ -25,16 +25,18 @@ func main() {
 				Value: "info",
 				Usage: "Log level (debug, info, warn, error, fatal, panic)",
 			},
-			&cli.StringFlag{
-				Name:  "filter-device-addr",
-				Value: "",
-				Usage: "Filter device by address",
-			},
 		},
 		Commands: []*cli.Command{
 			{
 				Name:  "ble",
 				Usage: "BLE-based commands",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "filter-device-addr",
+						Value: "",
+						Usage: "Filter device by address",
+					},
+				},
 				Subcommands: []*cli.Command{
 					{
 						Name:  "scan",

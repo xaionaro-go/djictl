@@ -20,7 +20,7 @@ func (s *InterfaceAppToVideoTransmission) PrepareToLiveStream(
 		return fmt.Errorf("unable to send the message (stage1): %w", err)
 	}
 
-	logger.Debugf(ctx, "received a duml.MessageTypePrepareToLiveStreamResult: %#+v", msg)
+	logger.Debugf(ctx, "received a duml.MessageTypePrepareToLiveStreamResult: %s", msg)
 	if len(msg.Payload) != 1 {
 		return fmt.Errorf("invalid payload size: %d", len(msg.Payload))
 	}
@@ -33,7 +33,7 @@ func (s *InterfaceAppToVideoTransmission) PrepareToLiveStream(
 		return fmt.Errorf("unable to send the message (stage2): %w", err)
 	}
 
-	logger.Debugf(ctx, "received a command result: %#+v", msg)
+	logger.Debugf(ctx, "received a command result: %s", msg)
 
 	return nil
 }

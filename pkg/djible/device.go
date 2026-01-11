@@ -121,6 +121,7 @@ func (d *Device) Init(ctx context.Context) (_err error) {
 	logger.Debugf(ctx, "connecting to %s:%s", d.Periph.ID(), d.Periph.Name())
 	d.Periph.Device().Connect(ctx, d.Periph)
 	<-d.ConnectedChan
+	statusChan := d.getReceiveMessageChan(ctx, duml.MessageTypeBatteryStatus)
 	d.Periph.Subscribe(0x2D, func(c *gatt.Characteristic, b []byte, err error) {
 		d.receiveNotification(ctx, c, b, err)
 	})
@@ -144,6 +145,13 @@ func (d *Device) Init(ctx context.Context) (_err error) {
 		return fmt.Errorf("unable to set MTU: %w", err)
 	}
 
+	logger.Debugf(ctx, "waiting for the device to be ready")
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case msg := <-statusChan:
+		logger.Debugf(ctx, "received a status: %#+v", msg)
+	}
 	return nil
 }
 
@@ -189,6 +197,7 @@ func (d *Device) receiveNotification(
 		select {
 		case d.getReceiveResponseChan(ctx, msg.ID) <- msg:
 		default:
+			logger.Tracef(ctx, "nobody waits for response to message ID %v, skipping", msg.ID)
 		}
 	}
 
@@ -294,7 +303,7 @@ func (d *Device) SendACK(
 			Receiver: msg.Interface.Sender,
 		},
 		ID:      msg.ID,
-		Type:    duml.NewResponse(msg.Type.CmdSet, msg.Type.CmdID),
+		Type:    duml.MessageTypeResponse(msg.Type.CmdSet, msg.Type.CmdID),
 		Payload: []byte{0x00},
 	}
 	return d.SendMessage(ctx, ack, true)
