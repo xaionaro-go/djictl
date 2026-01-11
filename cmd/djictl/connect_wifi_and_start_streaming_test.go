@@ -30,9 +30,10 @@ func TestConnectWiFiAndStartStreaming(t *testing.T) {
 	receiverChar.HandleNotifyFunc(func(ctx context.Context, r gatt.Request, n gatt.Notifier) {
 		t.Log("Central subscribed to receiver")
 		msg := &duml.Message{
-			Type:    duml.MessageTypeMaybeStatus,
-			Payload: make([]byte, 100), // Big enough packet
+			Type:    duml.MessageTypeBatteryStatus,
+			Payload: make([]byte, 21),
 		}
+		msg.Payload[20] = 100 // 100% battery
 		b := msg.Bytes()
 		t.Logf("RECV_HEX: %X", b)
 		simDevice.SendNotification(0x002D, b)
