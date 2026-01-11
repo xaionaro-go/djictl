@@ -184,6 +184,13 @@ func (d *Device) receiveNotification(
 	logger.Debugf(ctx, "received duml.Message: %#+v", msg)
 	logger.Tracef(ctx, "payload: %X", msg.Payload)
 
+	if msg.Type.Flags&duml.MessageTypeFlagAckRequired != 0 {
+		logger.Debugf(ctx, "sending ACK for message %v", msg.Type)
+		if err := d.SendACK(ctx, msg); err != nil {
+			logger.Errorf(ctx, "unable to send ACK for message %v: %v", msg.Type, err)
+		}
+	}
+
 	select {
 	case d.getReceiveMessageChan(ctx, msg.Type) <- msg:
 	default:
@@ -229,6 +236,22 @@ func (d *Device) SendMessage(
 		return fmt.Errorf("call Init first")
 	}
 	return d.Periph.WriteCharacteristic(ctx, d.CharacteristicSender, msg.Bytes(), noResponse)
+}
+
+func (d *Device) SendACK(
+	ctx context.Context,
+	msg *duml.Message,
+) error {
+	ack := &duml.Message{
+		Interface: duml.InterfaceID{
+			Sender:   msg.Interface.Receiver,
+			Receiver: msg.Interface.Sender,
+		},
+		ID:      msg.ID,
+		Type:    duml.NewResponse(msg.Type.CmdSet, msg.Type.CmdID),
+		Payload: []byte{0x00},
+	}
+	return d.SendMessage(ctx, ack, true)
 }
 
 func (d *Device) ReceiveMessage(
