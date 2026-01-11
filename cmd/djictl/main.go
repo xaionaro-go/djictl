@@ -135,7 +135,8 @@ func main() {
 								if err != nil {
 									return err
 								}
-								return dev.AppToCamera().SetFCCEnable(ctx, true)
+								_, err = dev.AppToCamera().SetFCCEnable(ctx, true)
+								return err
 							})
 						},
 					},
@@ -164,7 +165,8 @@ func main() {
 								default:
 									return fmt.Errorf("invalid mode: %s", c.String("mode"))
 								}
-								return dev.AppToGoggles().SetMode(ctx, mode)
+								_, err = dev.AppToGoggles().SetMode(ctx, mode)
+								return err
 							})
 						},
 					},
@@ -206,7 +208,8 @@ func main() {
 								if err != nil {
 									return err
 								}
-								return dev.AppToVideoTransmission().ConfigureRTMP(ctx, c.String("url"), !c.Bool("disable"))
+								_, err = dev.AppToVideoTransmission().ConfigureRTMP(ctx, c.String("url"), !c.Bool("disable"))
+								return err
 							})
 						},
 					},
@@ -237,7 +240,8 @@ func main() {
 								if err != nil {
 									return err
 								}
-								return dev.AppToCamera().GetVersion(ctx)
+								_, err = dev.AppToCamera().GetVersion(ctx)
+								return err
 							})
 						},
 					},

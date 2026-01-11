@@ -6,7 +6,7 @@ import (
 	"github.com/xaionaro-go/djictl/pkg/duml"
 )
 
-func (s *InterfaceAppToVideoTransmission) ConfigureRTMP(ctx context.Context, url string, enable bool) error {
+func (s *InterfaceAppToVideoTransmission) ConfigureRTMP(ctx context.Context, url string, enable bool) (*duml.Message, error) {
 	msg := duml.NewBroadcastMessage(enable, url)
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }

@@ -27,7 +27,7 @@ func (s *InterfaceAppToBattery) GetInfo(ctx context.Context) (*duml.BatteryStatu
 		Interface: s.InterfaceID(),
 		Type:      duml.MessageTypeGetBatteryInfo,
 	}
-	err := s.Device().SendMessage(ctx, msg, true)
+	_, err := s.Device().Request(ctx, msg, true)
 	if err != nil {
 		return nil, fmt.Errorf("unable to send GetBatteryInfo message: %w", err)
 	}

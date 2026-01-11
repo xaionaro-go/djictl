@@ -14,7 +14,7 @@ func (s *InterfaceAppToWiFiGroundStation) CameraAPInfo(
 	logger.Tracef(ctx, "CameraAPInfo")
 	defer func() { logger.Tracef(ctx, "/CameraAPInfo") }()
 
-	err := s.Device().SendMessage(ctx, s.GetMessageCameraAPInfo(), true)
+	_, err := s.Device().Request(ctx, s.GetMessageCameraAPInfo(), true)
 	if err != nil {
 		return "", "", fmt.Errorf("unable to send the duml.Message: %w", err)
 	}

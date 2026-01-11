@@ -107,41 +107,50 @@ func (t MessageType) WithFlags(f MessageTypeFlags) MessageType {
 }
 
 const (
-	CommandIDGetVersion   CommandID = 0x1E
+	// --- General (Set 0x00) ---
+	CommandIDGetSerialNum  CommandID = 0x0A
+	CommandIDPairingStage2 CommandID = 0x32
+	CommandIDFCCSupport    CommandID = 0xDE
+
+	// --- Info (Set 0x01) ---
 	CommandIDGetProductID CommandID = 0x0D
+	CommandIDGetVersion   CommandID = 0x1E
 
-	CommandIDOsmoBroadcastConfig CommandID = 0x08
-	CommandIDStartStopStreaming  CommandID = 0x8E
-	CommandIDPrepareToLiveStream CommandID = 0xE1
-	CommandIDConfigureStreaming  CommandID = 0x78
-
+	// --- Video / Camera (Set 0x02) ---
+	CommandIDOsmoBroadcastConfig    CommandID = 0x08
 	CommandIDVideoStreamSubscribe   CommandID = 0x3C
 	CommandIDVideoStreamUnsubscribe CommandID = 0x3D
-	CommandIDGogglesMode            CommandID = 0x3D
+	CommandIDPairingStarted         CommandID = 0x80
+	CommandIDStartStopStreaming     CommandID = 0x8E
+	CommandIDPrepareToLiveStream    CommandID = 0xE1
 
-	CommandIDRemoteControllerSimulatorData CommandID = 0x24
-
-	CommandIDBatteryStatus  CommandID = 0x02
-	CommandIDGetBatteryInfo CommandID = 0x03
-
+	// --- Flight Control (Set 0x03) ---
 	CommandIDFlightStickData CommandID = 0x02
 	CommandIDMotorControl    CommandID = 0x21
+	CommandIDGogglesMode     CommandID = 0x3D
 
-	CommandIDFCCSupport   CommandID = 0xDE
-	CommandIDGetSerialNum CommandID = 0x0A
-
+	// --- Gimbal (Set 0x04) ---
 	CommandIDMaybeStatus    CommandID = 0x05
 	CommandIDMaybeKeepAlive CommandID = 0x27
 
-	CommandIDPairingStage2      CommandID = 0x32
-	CommandIDPairingStarted     CommandID = 0x80
+	// --- Remote Controller (Set 0x06) ---
+	CommandIDRemoteControllerSimulatorData CommandID = 0x24
+
+	// --- WiFi (Set 0x07) ---
+	CommandIDCameraAPInfo       CommandID = 0x07
+	CommandIDCameraAPInfoResult CommandID = 0x0E
 	CommandIDSetPairingPIN      CommandID = 0x45
 	CommandIDPairingPINApproved CommandID = 0x46
 	CommandIDConnectToWiFi      CommandID = 0x47
 	CommandIDStartScanningWiFi  CommandID = 0xAB
 	CommandIDWiFiScanReport     CommandID = 0xAC
-	CommandIDCameraAPInfo       CommandID = 0x07
-	CommandIDCameraAPInfoResult CommandID = 0x0E
+
+	// --- Config (Set 0x08) ---
+	CommandIDConfigureStreaming CommandID = 0x78
+
+	// --- Battery (Set 0x0D) ---
+	CommandIDBatteryStatus  CommandID = 0x02
+	CommandIDGetBatteryInfo CommandID = 0x03
 )
 
 var (
@@ -218,8 +227,28 @@ func (t MessageType) String() string {
 		return "get_version"
 	case MessageTypeGetProductID:
 		return "get_product_id"
-	case MessageTypeOsmoBroadcastConfig:
-		return "osmo_broadcast_config"
+	case MessageTypeGetVersion:
+		return "get_version"
+	case MessageTypeVideoStreamSubscribe:
+		return "video_stream_subscribe"
+	case MessageTypeVideoStreamUnsubscribe:
+		return "video_stream_unsubscribe"
+	case MessageTypeGogglesMode:
+		return "goggles_mode"
+	case MessageTypeRemoteControllerSimulatorData:
+		return "remote_controller_simulator_data"
+	case MessageTypeBatteryStatus:
+		return "battery_status"
+	case MessageTypeGetBatteryInfo:
+		return "get_battery_info"
+	case MessageTypeFlightStickData:
+		return "flight_stick_data"
+	case MessageTypeMotorControl:
+		return "motor_control"
+	case MessageTypeFCCSupport:
+		return "fcc_support"
+	case MessageTypeGetSerialNum:
+		return "get_serial_num"
 	case MessageTypeMaybeStatus:
 		return "status?"
 	case MessageTypeMaybeKeepAlive:
@@ -248,8 +277,6 @@ func (t MessageType) String() string {
 		return "start_OR_stop_streaming"
 	case MessageTypeStartStopStreamingResult:
 		return "start_OR_stop_streaming_result"
-	case MessageTypeBatteryStatus:
-		return "battery_status"
 	case MessageTypeWiFiScanReport:
 		return "wifi_scan_results"
 	case MessageTypeStartScanningWiFi:
@@ -262,8 +289,8 @@ func (t MessageType) String() string {
 		return "camera_ap_info_result_ssid"
 	case MessageTypeCameraAPInfoResultPSK:
 		return "camera_ap_info_result_psk"
-	case MessageTypeRemoteControllerSimulatorData:
-		return "remote_controller_simulator_data"
+	case MessageTypeOsmoBroadcastConfig:
+		return "osmo_broadcast_config"
 	default:
 		return fmt.Sprintf("flags:%s set:%s id:%s", t.Flags, t.CmdSet, t.CmdID)
 	}

@@ -15,46 +15,34 @@ func (s *InterfaceAppToVideoTransmission) PrepareToLiveStream(
 	logger.Tracef(ctx, "PrepareToLiveStream")
 	defer func() { logger.Tracef(ctx, "/PrepareToLiveStream: %v", _err) }()
 
-	err := s.SendMessagePrepareToLiveStreamStage1(ctx)
+	msg, err := s.RequestPrepareToLiveStreamStage1(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to send the message (stage1): %w", err)
 	}
 
-	logger.Debugf(ctx, "waiting for a streaming status")
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case msg := <-s.Device().getReceiveMessageChan(ctx, duml.MessageTypePrepareToLiveStreamResult):
-		logger.Debugf(ctx, "received a duml.MessageTypePrepareToLiveStreamResult: %#+v", msg)
-		if len(msg.Payload) != 1 {
-			return fmt.Errorf("invalid payload size: %d", len(msg.Payload))
-		}
-		if msg.Payload[0] != 0x00 {
-			return fmt.Errorf("expected the payload to be 0x00, but received 0x%X", msg.Payload)
-		}
+	logger.Debugf(ctx, "received a duml.MessageTypePrepareToLiveStreamResult: %#+v", msg)
+	if len(msg.Payload) != 1 {
+		return fmt.Errorf("invalid payload size: %d", len(msg.Payload))
+	}
+	if msg.Payload[0] != 0x00 {
+		return fmt.Errorf("expected the payload to be 0x00, but received 0x%X", msg.Payload)
 	}
 
-	err = s.SendMessagePrepareToLiveStreamStage2(ctx)
+	msg, err = s.RequestPrepareToLiveStreamStage2(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to send the message (stage2): %w", err)
 	}
 
-	logger.Debugf(ctx, "waiting for the command result")
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case msg := <-s.Device().getReceiveMessageChan(ctx, duml.MessageTypeStartStopStreamingResult):
-		logger.Debugf(ctx, "received a command result: %#+v", msg)
-	}
+	logger.Debugf(ctx, "received a command result: %#+v", msg)
 
 	return nil
 }
 
-func (s *InterfaceAppToVideoTransmission) SendMessagePrepareToLiveStreamStage1(
+func (s *InterfaceAppToVideoTransmission) RequestPrepareToLiveStreamStage1(
 	ctx context.Context,
-) error {
+) (*duml.Message, error) {
 	msg := s.GetMessagePrepareToLiveStreamStage1()
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }
 
 func (s *InterfaceAppToVideoTransmission) GetMessagePrepareToLiveStreamStage1() *duml.Message {
@@ -72,11 +60,11 @@ func (s *InterfaceAppToVideoTransmission) GetMessagePayloadPrepareToLiveStreamSt
 	return buf.Bytes()
 }
 
-func (s *InterfaceAppToVideoTransmission) SendMessagePrepareToLiveStreamStage2(
+func (s *InterfaceAppToVideoTransmission) RequestPrepareToLiveStreamStage2(
 	ctx context.Context,
-) error {
+) (*duml.Message, error) {
 	msg := s.GetMessagePrepareToLiveStreamStage2()
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }
 
 func (s *InterfaceAppToVideoTransmission) GetMessagePrepareToLiveStreamStage2() *duml.Message {

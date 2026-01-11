@@ -13,30 +13,25 @@ func (s *InterfaceAppToCamera) SetImageStabilization(
 	ctx context.Context,
 	v duml.ImageStabilization,
 ) error {
-	err := s.SendMessageSetImageStabilization(ctx, v)
+	msg, err := s.RequestSetImageStabilization(ctx, v)
 	if err != nil {
 		return fmt.Errorf("unable to send the duml.Message: %w", err)
-	}
-	msg, err := s.ReceiveMessageSetImageStabilizationResult(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to receive a response: %w", err)
 	}
 	logger.Debugf(ctx, "got set image stabilization result payload: %X", msg.Payload)
 	return nil
 }
 
-func (s *InterfaceAppToCamera) SendMessageSetImageStabilization(
+func (s *InterfaceAppToCamera) RequestSetImageStabilization(
 	ctx context.Context,
 	v duml.ImageStabilization,
-) error {
+) (*duml.Message, error) {
 	msg := s.GetMessageSetImageStabilization(v)
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }
 
 func (s *InterfaceAppToCamera) GetMessageSetImageStabilization(
 	v duml.ImageStabilization,
 ) *duml.Message {
-	panic("not implemented")
 	return &duml.Message{
 		Interface: s.InterfaceID(),
 		ID:        0, //duml.MessageIDSetImageStabilization,
@@ -56,11 +51,4 @@ func (s *InterfaceAppToCamera) GetMessagePayloadSetImageStabilization(
 	must(buf.Write([]byte{0x00, 0x01}))
 	must(buf.Write(array1ToSlice(v.BytesFixed())))
 	return buf.Bytes()
-}
-
-func (s *InterfaceAppToCamera) ReceiveMessageSetImageStabilizationResult(
-	ctx context.Context,
-) (*duml.Message, error) {
-	panic("not implemented")
-	return s.Device().ReceiveMessage(ctx, duml.MessageTypeStartStopStreaming)
 }

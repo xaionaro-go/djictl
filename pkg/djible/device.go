@@ -36,6 +36,7 @@ type Device struct {
 	ReceiveLocker                          xsync.Mutex
 	ReceivedPairingRequestConfirmationChan chan struct{}
 	ReceivedMessageChan                    map[duml.MessageType]chan *duml.Message
+	ReceivedResponseChan                   map[duml.MessageID]chan *duml.Message
 }
 
 func NewDevice(
@@ -53,6 +54,7 @@ func NewDevice(
 		ConnectedChan:                          make(chan struct{}),
 		ReceivedPairingRequestConfirmationChan: make(chan struct{}),
 		ReceivedMessageChan:                    make(map[duml.MessageType]chan *duml.Message),
+		ReceivedResponseChan:                   make(map[duml.MessageID]chan *duml.Message),
 	}
 }
 
@@ -191,6 +193,13 @@ func (d *Device) receiveNotification(
 		}
 	}
 
+	if msg.Type.Flags&duml.MessageTypeFlagResponse != 0 {
+		select {
+		case d.getReceiveResponseChan(ctx, msg.ID) <- msg:
+		default:
+		}
+	}
+
 	select {
 	case d.getReceiveMessageChan(ctx, msg.Type) <- msg:
 	default:
@@ -207,6 +216,18 @@ func (d *Device) getReceiveMessageChan(
 			d.ReceivedMessageChan[msgType] = make(chan *duml.Message, 1)
 		}
 		return d.ReceivedMessageChan[msgType]
+	})
+}
+
+func (d *Device) getReceiveResponseChan(
+	ctx context.Context,
+	msgID duml.MessageID,
+) chan *duml.Message {
+	return xsync.DoR1(ctx, &d.ReceiveLocker, func() chan *duml.Message {
+		if d.ReceivedResponseChan[msgID] == nil {
+			d.ReceivedResponseChan[msgID] = make(chan *duml.Message, 1)
+		}
+		return d.ReceivedResponseChan[msgID]
 	})
 }
 
@@ -229,13 +250,46 @@ func (d *Device) SendMessage(
 	ctx context.Context,
 	msg *duml.Message,
 	noResponse bool,
-) (_err error) {
+) error {
 	logger.Tracef(ctx, "SendMessage")
-	defer func() { logger.Tracef(ctx, "/SendMessage: %v", _err) }()
+	defer func() { logger.Tracef(ctx, "/SendMessage") }()
 	if !d.IsInitialized() {
 		return fmt.Errorf("call Init first")
 	}
+
 	return d.Periph.WriteCharacteristic(ctx, d.CharacteristicSender, msg.Bytes(), noResponse)
+}
+
+func (d *Device) Request(
+	ctx context.Context,
+	msg *duml.Message,
+	noResponse bool,
+) (*duml.Message, error) {
+	logger.Tracef(ctx, "Request")
+	defer func() { logger.Tracef(ctx, "/Request") }()
+
+	if msg.Type.Flags&duml.MessageTypeFlagAckRequired == 0 {
+		return nil, fmt.Errorf("Request() called for a message that does not require a response; use SendMessage() instead")
+	}
+
+	respChan := d.getReceiveResponseChan(ctx, msg.ID)
+	// Clear previous stale responses if any
+	select {
+	case <-respChan:
+	default:
+	}
+
+	err := d.SendMessage(ctx, msg, noResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case resp := <-respChan:
+		return resp, nil
+	}
 }
 
 func (d *Device) SendACK(

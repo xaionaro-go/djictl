@@ -22,23 +22,18 @@ func (s *InterfaceAppToWiFiGroundStation) Pair(
 	if err != nil {
 		return fmt.Errorf("unable to send the request to start pairing: %w", err)
 	}
-	err = s.SendMessageSetPairingPIN(ctx, defaultPINCode)
+	msg, err := s.RequestSetPairingPIN(ctx, defaultPINCode)
 	if err != nil {
 		return fmt.Errorf("unable to send the message to set the PIN: %w", err)
 	}
 
-	logger.Debugf(ctx, "waiting for the pairing info")
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case msg := <-s.Device().getReceiveMessageChan(ctx, duml.MessageTypePairingStatus):
-		if len(msg.Payload) < 2 {
-			logger.Errorf(ctx, "the payload size of the pairing status is not 4: %d", len(msg.Payload))
-		} else {
-			if msg.Payload[1] == 0x01 {
-				logger.Debugf(ctx, "is already paired")
-				return nil
-			}
+	logger.Debugf(ctx, "received the pairing info: %#+v", msg)
+	if len(msg.Payload) < 2 {
+		logger.Errorf(ctx, "the payload size of the pairing status is too small: %d", len(msg.Payload))
+	} else {
+		if msg.Payload[1] == 0x01 {
+			logger.Debugf(ctx, "is already paired")
+			return nil
 		}
 	}
 
@@ -50,11 +45,11 @@ func (s *InterfaceAppToWiFiGroundStation) Pair(
 		logger.Debugf(ctx, "PIN was approved: %#+v", msg)
 	}
 
-	err = s.SendMessagePairingStage1(ctx)
+	_, err = s.RequestPairingStage1(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to send the command to pair (stage1): %w", err)
 	}
-	err = s.SendMessagePairingStage2(ctx)
+	_, err = s.RequestPairingStage2(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to send the command to pair (stage2): %w", err)
 	}
@@ -69,14 +64,14 @@ func (s *InterfaceAppToWiFiGroundStation) SendRequestStartPairing(
 	return s.Device().SendPairingRequest(ctx)
 }
 
-func (s *InterfaceAppToWiFiGroundStation) SendMessageSetPairingPIN(
+func (s *InterfaceAppToWiFiGroundStation) RequestSetPairingPIN(
 	ctx context.Context,
 	pinCode string,
-) (_err error) {
-	logger.Tracef(ctx, "SendMessageSetPairingPIN")
-	defer func() { logger.Tracef(ctx, "/SendMessageSetPairingPIN: %v", _err) }()
+) (_ret *duml.Message, _err error) {
+	logger.Tracef(ctx, "RequestSetPairingPIN")
+	defer func() { logger.Tracef(ctx, "/RequestSetPairingPIN: %v", _err) }()
 	msg := s.GetMessageSetPairingPIN(pinCode)
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }
 
 func (s *InterfaceAppToWiFiGroundStation) GetMessageSetPairingPIN(
@@ -107,13 +102,13 @@ func (s *InterfaceAppToWiFiGroundStation) ReceiveMessageSetPairingPINResult(
 	return s.Device().ReceiveMessage(ctx, duml.MessageTypeSetPairingPIN)
 }
 
-func (s *InterfaceAppToWiFiGroundStation) SendMessagePairingStage1(
+func (s *InterfaceAppToWiFiGroundStation) RequestPairingStage1(
 	ctx context.Context,
-) (_err error) {
-	logger.Tracef(ctx, "SendMessagePairingStage1")
-	defer func() { logger.Tracef(ctx, "/SendMessagePairingStage1: %v", _err) }()
+) (_ret *duml.Message, _err error) {
+	logger.Tracef(ctx, "RequestPairingStage1")
+	defer func() { logger.Tracef(ctx, "/RequestPairingStage1: %v", _err) }()
 	msg := s.GetMessagePairingStage1()
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }
 
 func (s *InterfaceAppToWiFiGroundStation) GetMessagePairingStage1() *duml.Message {
@@ -125,13 +120,13 @@ func (s *InterfaceAppToWiFiGroundStation) GetMessagePairingStage1() *duml.Messag
 	}
 }
 
-func (s *InterfaceAppToWiFiGroundStation) SendMessagePairingStage2(
+func (s *InterfaceAppToWiFiGroundStation) RequestPairingStage2(
 	ctx context.Context,
-) (_err error) {
-	logger.Tracef(ctx, "SendMessagePairingStage2")
-	defer func() { logger.Tracef(ctx, "/SendMessagePairingStage2: %v", _err) }()
+) (_ret *duml.Message, _err error) {
+	logger.Tracef(ctx, "RequestPairingStage2")
+	defer func() { logger.Tracef(ctx, "/RequestPairingStage2: %v", _err) }()
 	msg := s.GetMessagePairingStage2()
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }
 
 func (s *InterfaceAppToWiFiGroundStation) GetMessagePairingStage2() *duml.Message {

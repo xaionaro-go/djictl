@@ -22,7 +22,7 @@ func (s *InterfaceAppToWiFiGroundStation) ConnectToWiFi(
 	defer func() { logger.Tracef(ctx, "/ConnectToWiFi: %v", _err) }()
 
 	if wifiWaitForScanReport {
-		err := s.SendMessageStartScanningWiFi(ctx)
+		_, err := s.RequestStartScanningWiFi(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to send the duml.Message: %w", err)
 		}
@@ -36,34 +36,28 @@ func (s *InterfaceAppToWiFiGroundStation) ConnectToWiFi(
 		}
 	}
 
-	err := s.SendMessageConnectToWiFi(ctx, ssid, psk)
+	msg, err := s.RequestConnectToWiFi(ctx, ssid, psk)
 	if err != nil {
 		return fmt.Errorf("unable to send the duml.Message: %w", err)
 	}
 
-	logger.Debugf(ctx, "waiting for connecting to WiFi")
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case msg := <-s.Device().getReceiveMessageChan(ctx, duml.MessageTypeConnectToWiFiResult):
-		logger.Debugf(ctx, "received a report about connecting to WiFi: %#+v", msg)
-		if !bytes.Equal(msg.Payload, []byte{0, 0}) {
-			return fmt.Errorf("unable to connect to WiFi, payload should be 0000, but received %X", msg.Payload)
-		}
+	logger.Debugf(ctx, "received a report about connecting to WiFi: %#+v", msg)
+	if !bytes.Equal(msg.Payload, []byte{0, 0}) {
+		return fmt.Errorf("unable to connect to WiFi, payload should be 0000, but received %X", msg.Payload)
 	}
 
 	return nil
 }
 
-func (s *InterfaceAppToWiFiGroundStation) SendMessageConnectToWiFi(
+func (s *InterfaceAppToWiFiGroundStation) RequestConnectToWiFi(
 	ctx context.Context,
 	ssid string,
 	psk string,
-) (_err error) {
-	logger.Tracef(ctx, "SendMessageConnectToWiFi")
-	defer func() { logger.Tracef(ctx, "/SendMessageConnectToWiFi: %v", _err) }()
+) (_ret *duml.Message, _err error) {
+	logger.Tracef(ctx, "RequestConnectToWiFi")
+	defer func() { logger.Tracef(ctx, "/RequestConnectToWiFi: %v", _err) }()
 	msg := s.GetMessageConnectToWiFi(ssid, psk)
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }
 
 func (s *InterfaceAppToWiFiGroundStation) GetMessageConnectToWiFi(
@@ -91,13 +85,13 @@ func (s *InterfaceAppToWiFiGroundStation) GetMessagePayloadConnectToWiFi(
 	return buf.Bytes()
 }
 
-func (s *InterfaceAppToWiFiGroundStation) SendMessageStartScanningWiFi(
+func (s *InterfaceAppToWiFiGroundStation) RequestStartScanningWiFi(
 	ctx context.Context,
-) (_err error) {
-	logger.Tracef(ctx, "SendMessageStartScanningWiFi")
-	defer func() { logger.Tracef(ctx, "/SendMessageStartScanningWiFi: %v", _err) }()
+) (_ret *duml.Message, _err error) {
+	logger.Tracef(ctx, "RequestStartScanningWiFi")
+	defer func() { logger.Tracef(ctx, "/RequestStartScanningWiFi: %v", _err) }()
 	msg := s.GetMessageStartScanningWiFi()
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }
 
 func (s *InterfaceAppToWiFiGroundStation) GetMessageStartScanningWiFi() *duml.Message {

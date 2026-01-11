@@ -11,22 +11,18 @@ import (
 func (s *InterfaceAppToVideoTransmission) StopLiveStream(
 	ctx context.Context,
 ) error {
-	err := s.SendMessageStopLiveStream(ctx)
+	_, err := s.RequestStopLiveStream(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to send the duml.Message: %w", err)
-	}
-	_, err = s.ReceiveMessageStopLiveStreamResult(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to receive a response: %w", err)
 	}
 	return nil
 }
 
-func (s *InterfaceAppToVideoTransmission) SendMessageStopLiveStream(
+func (s *InterfaceAppToVideoTransmission) RequestStopLiveStream(
 	ctx context.Context,
-) error {
+) (*duml.Message, error) {
 	msg := s.GetMessageStopLiveStream()
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }
 
 func (s *InterfaceAppToVideoTransmission) GetMessageStopLiveStream() *duml.Message {
@@ -42,10 +38,4 @@ func (s *InterfaceAppToVideoTransmission) GetMessagePayloadStopLiveStream() []by
 	var buf bytes.Buffer
 	must(buf.Write([]byte{0x01, 0x01, 0x1A, 0x00, 0x01, 0x02}))
 	return buf.Bytes()
-}
-
-func (s *InterfaceAppToVideoTransmission) ReceiveMessageStopLiveStreamResult(
-	ctx context.Context,
-) (*duml.Message, error) {
-	return s.Device().ReceiveMessage(ctx, duml.MessageTypeStartStopStreaming)
 }

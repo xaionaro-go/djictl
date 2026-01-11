@@ -22,27 +22,16 @@ func (s *InterfaceAppToVideoTransmission) LiveStream(
 		logger.Tracef(ctx, "/LiveStream(ctx, %v, %v, %v, %v): %v", resolution, bitrateKbps, fps, rtmpURL, _err)
 	}()
 
-	err := s.SendMessageConfigureLiveStream(ctx, resolution, bitrateKbps, fps, rtmpURL)
+	_, err := s.RequestConfigureLiveStream(ctx, resolution, bitrateKbps, fps, rtmpURL)
 	if err != nil {
 		return fmt.Errorf("unable to send the message to configure the live stream: %w", err)
 	}
 
-	err = s.SendMessageStartLiveStream(ctx)
+	_, err = s.RequestStartLiveStream(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to send the message to start the live stream: %w", err)
 	}
 
-	for {
-		msg, err := s.ReceiveMessageStartLiveStreamResult(ctx)
-		if err != nil {
-			return fmt.Errorf("unable to receive a response: %w", err)
-		}
-		if msg.ID != duml.MessageIDStartStreaming {
-			logger.Debugf(ctx, "received an unexpected duml.Message, ID:%X", msg.ID)
-			continue
-		}
-		break
-	}
 	for {
 		msg, err := s.ReceiveMessageLiveStreamResult(ctx)
 		if err != nil {
@@ -57,17 +46,19 @@ func (s *InterfaceAppToVideoTransmission) LiveStream(
 	}
 }
 
-func (s *InterfaceAppToVideoTransmission) SendMessageConfigureLiveStream(
+func (s *InterfaceAppToVideoTransmission) RequestConfigureLiveStream(
 	ctx context.Context,
 	resolution duml.Resolution,
 	bitrateKbps uint16,
 	fps duml.FPS,
 	rtmpURL string,
-) error {
+) (*duml.Message, error) {
+	logger.Tracef(ctx, "RequestConfigureLiveStream")
+	defer func() { logger.Tracef(ctx, "/RequestConfigureLiveStream") }()
 	msg := s.GetMessageConfigureLiveStream(
 		resolution, bitrateKbps, fps, rtmpURL,
 	)
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }
 
 func (s *InterfaceAppToVideoTransmission) GetMessageConfigureLiveStream(
@@ -123,11 +114,11 @@ func (s *InterfaceAppToVideoTransmission) ReceiveMessageLiveStreamResult(
 	return s.Device().ReceiveMessage(ctx, duml.MessageTypeBatteryStatus)
 }
 
-func (s *InterfaceAppToVideoTransmission) SendMessageStartLiveStream(
+func (s *InterfaceAppToVideoTransmission) RequestStartLiveStream(
 	ctx context.Context,
-) error {
+) (*duml.Message, error) {
 	msg := s.GetMessageStartLiveStream()
-	return s.Device().SendMessage(ctx, msg, true)
+	return s.Device().Request(ctx, msg, true)
 }
 
 func (s *InterfaceAppToVideoTransmission) GetMessageStartLiveStream() *duml.Message {
