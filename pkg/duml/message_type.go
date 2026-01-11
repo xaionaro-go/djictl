@@ -1,86 +1,157 @@
 package duml
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
+	"strings"
 )
 
-type MessageType uint32
+type MessageTypeFlags uint8
 
 const (
+	MessageTypeFlagRequest     MessageTypeFlags = 0x00
+	MessageTypeFlagAckRequired MessageTypeFlags = 0x40
+	MessageTypeFlagResponse    MessageTypeFlags = 0x80
+)
+
+func (f MessageTypeFlags) String() string {
+	var parts []string
+	if f&MessageTypeFlagResponse != 0 {
+		parts = append(parts, "Response")
+	} else {
+		parts = append(parts, "Request")
+	}
+	if f&MessageTypeFlagAckRequired != 0 {
+		if f&MessageTypeFlagResponse != 0 {
+			parts = append(parts, "Ack")
+		} else {
+			parts = append(parts, "AckRequired")
+		}
+	}
+	return strings.Join(parts, "|")
+}
+
+type CommandSet uint8
+
+const (
+	CommandSetGeneral          CommandSet = 0x00
+	CommandSetInfo             CommandSet = 0x01
+	CommandSetCamera           CommandSet = 0x02
+	CommandSetFlightController CommandSet = 0x03
+	CommandSetGimbal           CommandSet = 0x04
+	CommandSetRemoteController CommandSet = 0x06
+	CommandSetWiFi             CommandSet = 0x07
+	CommandSetConfig           CommandSet = 0x08
+	CommandSetVision           CommandSet = 0x0a
+	CommandSetBattery          CommandSet = 0x0d
+)
+
+func (s CommandSet) String() string {
+	switch s {
+	case CommandSetGeneral:
+		return "General"
+	case CommandSetInfo:
+		return "Info"
+	case CommandSetCamera:
+		return "Camera"
+	case CommandSetFlightController:
+		return "FlightController"
+	case CommandSetGimbal:
+		return "Gimbal"
+	case CommandSetRemoteController:
+		return "RemoteController"
+	case CommandSetWiFi:
+		return "WiFi"
+	case CommandSetConfig:
+		return "Config"
+	case CommandSetVision:
+		return "Vision"
+	case CommandSetBattery:
+		return "Battery"
+	default:
+		return fmt.Sprintf("0x%02X", uint8(s))
+	}
+}
+
+type MessageType struct {
+	Flags  MessageTypeFlags
+	CmdSet CommandSet
+	CmdID  uint8
+}
+
+var (
 	// See: https://github.com/xaionaro/reverse-engineering-dji
 
 	// --- General / Info (Set 0x01) ---
-	MessageTypeGetVersion   = MessageType(0x40011E)
-	MessageTypeGetProductID = MessageType(0x40010D)
+	MessageTypeGetVersion   = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetInfo, CmdID: 0x1E}
+	MessageTypeGetProductID = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetInfo, CmdID: 0x0D}
 
 	// --- Video / Camera (Set 0x02) ---
-	MessageTypeOsmoBroadcastConfig       = MessageType(0x400208)
-	MessageTypeStartStopStreaming        = MessageType(0x40028E)
-	MessageTypeStartStopStreamingResult  = MessageType(0x80028E)
-	MessageTypePrepareToLiveStream       = MessageType(0x4002E1)
-	MessageTypePrepareToLiveStreamResult = MessageType(0xC002E1)
-	MessageTypeConfigureStreaming        = MessageType(0x400878)
+	MessageTypeOsmoBroadcastConfig       = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetCamera, CmdID: 0x08}
+	MessageTypeStartStopStreaming        = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetCamera, CmdID: 0x8E}
+	MessageTypeStartStopStreamingResult  = MessageType{Flags: MessageTypeFlagResponse, CmdSet: CommandSetCamera, CmdID: 0x8E}
+	MessageTypePrepareToLiveStream       = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetCamera, CmdID: 0xE1}
+	MessageTypePrepareToLiveStreamResult = MessageType{Flags: MessageTypeFlagResponse | MessageTypeFlagAckRequired, CmdSet: CommandSetCamera, CmdID: 0xE1}
+	MessageTypeConfigureStreaming        = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetConfig, CmdID: 0x78}
 
 	// --- Goggles 2 / USB (Set 0x02) ---
-	MessageTypeVideoStreamSubscribe   = MessageType(0x40023C)
-	MessageTypeVideoStreamUnsubscribe = MessageType(0x40023D)
-	MessageTypeGogglesMode            = MessageType(0x40033D)
+	MessageTypeVideoStreamSubscribe   = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetCamera, CmdID: 0x3C}
+	MessageTypeVideoStreamUnsubscribe = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetCamera, CmdID: 0x3D}
+	MessageTypeGogglesMode            = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetFlightController, CmdID: 0x3D}
 
 	// --- Remote Controller / Simulator (Set 0x06) ---
-	MessageTypeRemoteControllerSimulatorData = MessageType(0x000624)
+	MessageTypeRemoteControllerSimulatorData = MessageType{Flags: MessageTypeFlagRequest, CmdSet: CommandSetRemoteController, CmdID: 0x24}
 
 	// --- Battery / Power (Set 0x0D) ---
-	MessageTypeBatteryStatus  = MessageType(0x000D02)
-	MessageTypeGetBatteryInfo = MessageType(0x400D03)
+	MessageTypeBatteryStatus  = MessageType{Flags: MessageTypeFlagRequest, CmdSet: CommandSetBattery, CmdID: 0x02}
+	MessageTypeGetBatteryInfo = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetBattery, CmdID: 0x03}
 
 	// --- Flight Control (Set 0x03) ---
-	MessageTypeFlightStickData = MessageType(0x000302)
-	MessageTypeMotorControl    = MessageType(0x400321)
+	MessageTypeFlightStickData = MessageType{Flags: MessageTypeFlagRequest, CmdSet: CommandSetFlightController, CmdID: 0x02}
+	MessageTypeMotorControl    = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetFlightController, CmdID: 0x21}
 
 	// --- Common / Config (Set 0x00) ---
-	MessageTypeFCCSupport   = MessageType(0x4000DE)
-	MessageTypeGetSerialNum = MessageType(0x40000A)
+	MessageTypeFCCSupport   = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetGeneral, CmdID: 0xDE}
+	MessageTypeGetSerialNum = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetGeneral, CmdID: 0x0A}
 
 	// --- InterfaceID: FlightControllerToApp (0x0402) ---
-	MessageTypeMaybeStatus    = MessageType(0x000405)
-	MessageTypeMaybeKeepAlive = MessageType(0x000427)
+	MessageTypeMaybeStatus    = MessageType{Flags: MessageTypeFlagRequest, CmdSet: CommandSetGimbal, CmdID: 0x05}
+	MessageTypeMaybeKeepAlive = MessageType{Flags: MessageTypeFlagRequest, CmdSet: CommandSetGimbal, CmdID: 0x27}
 
 	// --- InterfaceID: AppToPairer ---
-	MessageTypePairingStage2           = MessageType(0x400032)
-	MessageTypePairingStarted          = MessageType(0x000280)
-	MessageTypeSetPairingPIN           = MessageType(0x400745)
-	MessageTypePairingStatus           = MessageType(0xC00745)
-	MessageTypePairingPINApproved      = MessageType(0x400746)
-	MessageTypePairingStage1           = MessageType(0xC00746)
-	MessageTypeConnectToWiFi           = MessageType(0x400747)
-	MessageTypeConnectToWiFiResult     = MessageType(0xC00747)
-	MessageTypeStartScanningWiFi       = MessageType(0x4007AB)
-	MessageTypeStartScanningWiFiResult = MessageType(0xC007AB)
-	MessageTypeWiFiScanReport          = MessageType(0x4007AC)
-	MessageTypeCameraAPInfo            = MessageType(0x400707)
-	MessageTypeCameraAPInfoResultSSID  = MessageType(0xC00707)
-	MessageTypeCameraAPInfoResultPSK   = MessageType(0xC0070E)
+	MessageTypePairingStage2           = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetGeneral, CmdID: 0x32}
+	MessageTypePairingStarted          = MessageType{Flags: MessageTypeFlagRequest, CmdSet: CommandSetCamera, CmdID: 0x80}
+	MessageTypeSetPairingPIN           = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0x45}
+	MessageTypePairingStatus           = MessageType{Flags: MessageTypeFlagResponse | MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0x45}
+	MessageTypePairingPINApproved      = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0x46}
+	MessageTypePairingStage1           = MessageType{Flags: MessageTypeFlagResponse | MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0x46}
+	MessageTypeConnectToWiFi           = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0x47}
+	MessageTypeConnectToWiFiResult     = MessageType{Flags: MessageTypeFlagResponse | MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0x47}
+	MessageTypeStartScanningWiFi       = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0xAB}
+	MessageTypeStartScanningWiFiResult = MessageType{Flags: MessageTypeFlagResponse | MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0xAB}
+	MessageTypeWiFiScanReport          = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0xAC}
+	MessageTypeCameraAPInfo            = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0x07}
+	MessageTypeCameraAPInfoResultSSID  = MessageType{Flags: MessageTypeFlagResponse | MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0x07}
+	MessageTypeCameraAPInfoResultPSK   = MessageType{Flags: MessageTypeFlagResponse | MessageTypeFlagAckRequired, CmdSet: CommandSetWiFi, CmdID: 0x0E}
 
-	MessageTypeUnknown0 = MessageType(0x400081)
-	MessageTypeUnknown1 = MessageType(0x0000F1)
-	MessageTypeUnknown2 = MessageType(0x0002DC)
-	MessageTypeUnknown3 = MessageType(0x00041C)
-	MessageTypeUnknown4 = MessageType(0x000438)
-	MessageTypeUnknown5 = MessageType(0x000745)
+	MessageTypeUnknown0 = MessageType{Flags: MessageTypeFlagAckRequired, CmdSet: CommandSetGeneral, CmdID: 0x81}
+	MessageTypeUnknown1 = MessageType{Flags: MessageTypeFlagRequest, CmdSet: CommandSetGeneral, CmdID: 0xF1}
+	MessageTypeUnknown2 = MessageType{Flags: MessageTypeFlagRequest, CmdSet: CommandSetCamera, CmdID: 0xDC}
+	MessageTypeUnknown3 = MessageType{Flags: MessageTypeFlagRequest, CmdSet: CommandSetGimbal, CmdID: 0x1C}
+	MessageTypeUnknown4 = MessageType{Flags: MessageTypeFlagRequest, CmdSet: CommandSetGimbal, CmdID: 0x38}
+	MessageTypeUnknown5 = MessageType{Flags: MessageTypeFlagRequest, CmdSet: CommandSetWiFi, CmdID: 0x45}
 )
 
-func (t MessageType) Flags() uint8 {
-	return uint8(t >> 16)
+func (t MessageType) GetFlags() uint8 {
+	return uint8(t.Flags)
 }
 
-func (t MessageType) CmdSet() uint8 {
-	return uint8((t >> 8) & 0xFF)
+func (t MessageType) GetCmdSet() uint8 {
+	return uint8(t.CmdSet)
 }
 
-func (t MessageType) CmdID() uint8 {
-	return uint8(t & 0xFF)
+func (t MessageType) GetCmdID() uint8 {
+	return t.CmdID
 }
 
 func (t MessageType) String() string {
@@ -136,26 +207,21 @@ func (t MessageType) String() string {
 	case MessageTypeRemoteControllerSimulatorData:
 		return "remote_controller_simulator_data"
 	default:
-		return fmt.Sprintf("flags:%02X set:%02X id:%02X", t.Flags(), t.CmdSet(), t.CmdID())
+		return fmt.Sprintf("flags:%s set:%s id:%02X", t.Flags, t.CmdSet, t.CmdID)
 	}
 }
 
 func (t *MessageType) ParseFrom(r io.Reader) error {
-	var b [4]byte
-	n, err := r.Read(b[1:])
-	if err != nil {
+	var b [3]byte
+	if _, err := io.ReadFull(r, b[:]); err != nil {
 		return err
 	}
-	if n != 3 {
-		return fmt.Errorf("%w: expected 3, but read %d", io.ErrShortBuffer, n)
-	}
-	v := binary.BigEndian.Uint32(b[:])
-	*t = MessageType(v)
+	t.Flags = MessageTypeFlags(b[0])
+	t.CmdSet = CommandSet(b[1])
+	t.CmdID = b[2]
 	return nil
 }
 
 func (t MessageType) Bytes() []byte {
-	var r [4]byte
-	binary.BigEndian.PutUint32(r[:], uint32(t))
-	return r[1:]
+	return []byte{uint8(t.Flags), uint8(t.CmdSet), t.CmdID}
 }
